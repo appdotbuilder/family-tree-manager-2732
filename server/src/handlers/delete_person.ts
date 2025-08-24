@@ -1,9 +1,29 @@
+import { db } from '../db';
+import { peopleTable } from '../db/schema';
 import { type GetPersonInput } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function deletePerson(input: GetPersonInput): Promise<{ success: boolean }> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is removing a family member from the database.
-    // Should delete the person and all associated relationships (cascade delete).
-    // Should return success status.
-    return Promise.resolve({ success: true });
-}
+export const deletePerson = async (input: GetPersonInput): Promise<{ success: boolean }> => {
+  try {
+    // Check if person exists first
+    const existingPerson = await db.select()
+      .from(peopleTable)
+      .where(eq(peopleTable.id, input.id))
+      .execute();
+
+    if (existingPerson.length === 0) {
+      throw new Error(`Person with id ${input.id} not found`);
+    }
+
+    // Delete the person - relationships will be cascade deleted automatically
+    // due to foreign key constraints with onDelete: 'cascade'
+    const result = await db.delete(peopleTable)
+      .where(eq(peopleTable.id, input.id))
+      .execute();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Person deletion failed:', error);
+    throw error;
+  }
+};
